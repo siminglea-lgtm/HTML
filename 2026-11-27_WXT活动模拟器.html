@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>WXT 活动模拟器</title>
+<style>
+:root {
+  --ink:#182937; --muted:#51656f; --line:#dce7e8; --soft:#f4f7f7;
+  --white:#fff; --teal:#17635c; --teal-dark:#104942; --teal-pale:#e9f4f1;
+  --red:#9b2c39; --red-border:#ead2d7; --red-pale:#fff7f7;
+  --spot:#279080; --contract:#295675; --protect:#d48643; --other:#839199;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--soft); color:var(--ink); }
+button,input,select { font:inherit; }
+button { cursor:pointer; }
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible { outline:2px solid #227466; outline-offset:3px; }
+[hidden] { display:none !important; }
+.wrap { max-width:1440px; margin:auto; padding-inline:36px; }
+.top { background:#122d37; color:white; }
+.head { min-height:126px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.head h1 { margin:0 0 8px; font-size:clamp(25px,3vw,35px); font-weight:750; letter-spacing:.02em; }
+.head p { margin:0; color:#c1dbd9; font-size:14px; line-height:1.55; }
+.reset { border:1px solid #608080; background:transparent; color:white; border-radius:9px; padding:10px 14px; white-space:nowrap; }
+.reset:hover { background:#28454b; }
+.nav-shell { background:var(--white); border-bottom:1px solid var(--line); }
+.nav { display:flex; align-items:stretch; gap:28px; overflow-x:auto; }
+.nav button { padding:14px 3px 12px; border:0; border-bottom:3px solid transparent; background:none; color:var(--muted); white-space:nowrap; font-weight:640; font-size:14px; }
+.nav button[aria-selected="true"] { color:var(--teal); border-bottom-color:var(--teal); }
+main.wrap { padding-top:25px; padding-bottom:40px; }
+.layout { display:grid; grid-template-columns:minmax(275px,310px) minmax(0,1fr); gap:22px; align-items:start; }
+.panel { padding:20px; border:1px solid var(--line); border-radius:15px; background:var(--white); min-width:0; }
+.panel h2 { margin:0; font-size:18px; letter-spacing:.01em; }
+.panel h3 { margin:0; font-size:15px; }
+.caption { margin:8px 0 0; font-size:13px; line-height:1.6; color:var(--muted); }
+.control-head p { margin-top:6px; }
+.scenario-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; border:1px solid var(--line); border-radius:10px; background:#f4f7f6; padding:4px; margin:16px 0 13px; }
+.scenario-tabs button { border:0; background:none; border-radius:7px; padding:7px 3px; color:var(--muted); font-size:13px; line-height:1.4; }
+.scenario-tabs button[aria-pressed="true"] { background:var(--teal); color:#fff; font-weight:680; }
+.section-control { border-top:1px solid var(--line); }
+.section-control summary { padding:13px 0; cursor:pointer; font-size:14px; font-weight:670; color:var(--teal-dark); }
+.field { margin:0 0 12px; display:block; }
+.field-title { display:block; font-weight:630; font-size:13px; line-height:1.35; margin-bottom:5px; }
+.control { margin:0; color:var(--red); border:1px solid var(--red-border); border-radius:8px; background:var(--red-pale); font-weight:650; }
+.input-row { display:flex; align-items:center; gap:7px; }
+.input-row .control { width:100%; min-width:0; padding:7px 10px; min-height:34px; }
+.input-row .unit { white-space:nowrap; color:var(--muted); font-size:12px; }
+.info { display:block; color:var(--muted); font-size:11.5px; line-height:1.5; margin-top:5px; }
+.linked { display:block; color:var(--teal-dark); font-size:11.5px; line-height:1.5; margin-top:5px; font-variant-numeric:tabular-nums; }
+.control:invalid { border:2px solid var(--red); }
+.help { font-size:12px; color:var(--muted); line-height:1.5; }
+.tiers { width:100%; margin-bottom:10px; table-layout:fixed; font-size:12px; }
+.tiers input { width:100%; padding:6px; min-width:0; }
+.stack { display:grid; gap:18px; min-width:0; }
+.summaries { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.kpi { padding:15px; background:var(--white); border:1px solid var(--line); border-radius:13px; }
+.kpi .name { display:block; color:var(--muted); font-size:13px; margin-bottom:9px; line-height:1.45; }
+.kpi .value { display:block; color:var(--teal-dark); font-size:clamp(20px,2.6vw,30px); font-weight:740; line-height:1; font-variant-numeric:tabular-nums; }
+.kpi .foot { display:block; margin-top:9px; font-size:12px; color:var(--muted); }
+.panel-head { display:flex; justify-content:space-between; align-items:start; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.tag { padding:4px 8px; background:var(--teal-pale); border-radius:6px; font-size:12px; color:var(--teal-dark); font-weight:650; }
+.tag.warn { background:#ffe9e8; color:var(--red); }
+.chart { display:grid; gap:8px; margin-top:4px; }
+.bar-row { display:grid; grid-template-columns:70px minmax(0,1fr) 97px; align-items:center; gap:10px; font-size:13px; min-height:22px; }
+.bar-line { height:12px; background:#eaf0f1; border-radius:4px; overflow:hidden; display:flex; }
+.bar { display:block; height:100%; }
+.bar-total { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.legend { display:flex; flex-wrap:wrap; gap:5px 15px; margin:12px 0 0; padding:0; list-style:none; color:var(--muted); font-size:12px; }
+.legend li { display:flex; align-items:center; gap:5px; }
+.swatch { display:inline-block; width:9px; height:9px; border-radius:2px; }
+.spot { background:var(--spot); }
+.contract { background:var(--contract); }
+.protect { background:var(--protect); }
+.other { background:var(--other); }
+.scroll { width:100%; overflow-x:auto; }
+table { border-collapse:separate; border-spacing:0; width:100%; }
+th,td { border-bottom:1px solid var(--line); padding:9px 10px; font-size:13px; }
+thead th { text-align:right; background:#f0f5f5; color:var(--teal-dark); font-weight:680; }
+thead th:first-child,tbody th { text-align:left; }
+tbody th { font-weight:560; line-height:1.35; }
+td { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.result-table { min-width:490px; }
+.result-table th:first-child { width:45%; }
+.result-table .current { background:#edf6f4; }
+.result-table .important th,.result-table .important td { font-weight:720; color:var(--teal-dark); }
+.subtle-row th,.subtle-row td { color:var(--muted); }
+table tr:last-child > * { border-bottom:0; }
+.driver-guide { margin-bottom:22px; padding-block:0; }
+.driver-guide summary { padding:14px 0; color:var(--teal-dark); cursor:pointer; font-size:17px; font-weight:700; }
+.driver-guide table { table-layout:fixed; }
+.driver-guide thead th:first-child { width:16%; }
+.driver-guide thead th:nth-child(2) { width:36%; }
+.driver-guide th,.driver-guide td { text-align:left; white-space:normal; vertical-align:top; line-height:1.55; overflow-wrap:anywhere; }
+.driver-guide tbody th { color:var(--teal-dark); font-weight:670; }
+.driver-guide .caption { padding:9px 0 14px; margin:0; }
+.secondary { max-width:1190px; margin:0 auto; }
+.goal-grid { display:grid; grid-template-columns:minmax(260px,1fr) minmax(0,1.45fr); gap:18px; }
+.goal-results dt { color:var(--ink); font-size:13px; }
+.goal-results dd { margin:4px 0 17px; font-size:21px; color:var(--teal-dark); font-weight:720; overflow-wrap:anywhere; }
+.goal-results dd small { font-size:13px; color:var(--muted); margin-left:6px; }
+.action-list { margin:0; }
+.action-list dt { font-weight:650; margin:11px 0 3px; }
+.action-list dd { margin:0; font-size:13px; line-height:1.55; color:var(--muted); }
+.outcome { display:flex; align-items:baseline; flex-wrap:wrap; gap:10px; margin-top:9px; color:var(--muted); }
+.outcome strong { color:var(--teal-dark); font-size:20px; }
+.hours { display:grid; grid-template-columns:repeat(4,minmax(90px,1fr)); gap:10px; }
+.case-table { min-width:2370px; }
+.case-table thead th { text-align:center; white-space:normal; min-width:86px; }
+.case-table tbody th { position:sticky; left:0; background:white; min-width:143px; z-index:1; }
+.case-table td input { width:81px; padding:5px 6px; min-height:29px; }
+.case-table td:last-child { min-width:95px; }
+.case-table th:nth-child(n+15),.case-table tbody td:nth-child(n+15) { background:#f0f7f6; }
+.case-table .different,.audit-table .different { color:var(--red); background:var(--red-pale); }
+.audit-table { min-width:720px; }
+.audit-table thead tr:nth-child(2) th { font-size:12px; }
+.audit-table th.heading { background:#dfeeea; }
+.audit-count { font-variant-numeric:tabular-nums; }
+.footer { margin-top:22px; color:var(--muted); }
+.footer summary { cursor:pointer; font-size:13px; color:var(--teal-dark); }
+@media(max-width:1000px) {
+  .wrap { padding-inline:22px; }
+  .layout { gap:14px; grid-template-columns:minmax(245px,270px) minmax(0,1fr); }
+  .panel { padding:15px; }
+  .kpi { padding:13px 10px; }
+}
+@media(max-width:760px) {
+  .wrap { padding-inline:14px; }
+  .head { min-height:112px; gap:8px; }
+  .reset { padding:8px; font-size:12px; }
+  .nav { gap:21px; }
+  main.wrap { padding-top:14px; }
+  .driver-guide th,.driver-guide td { padding:7px 5px; font-size:12px; }
+  .driver-guide thead th:first-child { width:20%; }
+  .layout,.goal-grid { grid-template-columns:1fr; }
+  .summaries { gap:6px; }
+  .kpi .value { font-size:clamp(16px,4vw,25px); }
+  .kpi .name,.kpi .foot { font-size:11px; }
+  .hours { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .bar-row { grid-template-columns:57px minmax(0,1fr) 82px; gap:6px; font-size:12px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap head">
+    <div><h1>WXT 活动模拟器</h1><p>修改红色参数，即时比较合约、现货和活动预算。</p></div>
+    <button id="reset" class="reset" type="button">恢复默认</button>
+  </div>
+</header>
+<div class="nav-shell">
+  <nav class="wrap nav" role="tablist" aria-label="模拟器页面">
+    <button type="button" id="tab-overview" role="tab" aria-selected="true" aria-controls="overview" data-view="overview">活动测算</button>
+    <button type="button" id="tab-goal" role="tab" aria-selected="false" aria-controls="goal" data-view="goal" tabindex="-1">目标倒推</button>
+    <button type="button" id="tab-cases" role="tab" aria-selected="false" aria-controls="cases" data-view="cases" tabindex="-1">逐户验算</button>
+    <button type="button" id="tab-audit" role="tab" aria-selected="false" aria-controls="audit" data-view="audit" tabindex="-1">原表校验</button>
+  </nav>
+</div>
+<main class="wrap">
+  <details class="panel driver-guide" open>
+    <summary id="driver-guide-heading">输入与预测结果</summary>
+    <table aria-labelledby="driver-guide-heading">
+      <thead><tr><th scope="col">预测什么</th><th scope="col">调哪些输入</th><th scope="col">哪些结果会变</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">拉新与转化</th><td>活动报名人数、报名中新注册比例、新注册至合约 eFTTc 转化率</td><td>报名人数 × 新注册比例得出注册人数，再乘转化率得出合约 eFTTc。报名人数也带动现货买入人数和规模。</td></tr>
+        <tr><th scope="row">合约活动 DAU</th><td>平台基线合约 DAU、合约活动 DAU 渗透率、历史奖励强度</td><td>平台 DAU × 活动渗透率得到活动 DAU。它用于计算人均合约交易量，乘历史奖励强度可复算原表口径的 WXT 奖励及其成本。</td></tr>
+        <tr><th scope="row">合约成交与手续费</th><td>平台基线日均合约成交、基础成交覆盖率、交易量变化率、合约费率、平台留存比例</td><td>前三项决定日均成交，进而改变人均成交和手续费。费率还影响抵扣返奖预算，留存比例用于计算平台留存手续费。</td></tr>
+        <tr><th scope="row">现货买卖与手续费</th><td>活动报名人数、买入率、人均买入量和卖出量、现货估值、费率和留存比例</td><td>报名人数 × 买入率得到预计买家数。按未取整的买家数乘各自人均量得到买入量和卖出量，再结合估值、费率和留存比例得到现货留存手续费。</td></tr>
+        <tr><th scope="row">现货净买入</th><td>活动报名人数、正净买入率、正净买家人均净买入量、净买入结算基础</td><td>报名人数 × 正净买入率得到预计正净买家数。默认按未取整的正净买家数 × 人均净买入量计算净额。选择「买入减卖出」后，买入量和卖出量直接决定净额。净买入量进一步影响奖励计提和价保预算。</td></tr>
+        <tr><th scope="row">现货积分奖池</th><td>净买入量、每千枚奖励、活动天数、积分档位与资格通过率、奖池发放方式及上限</td><td>净买入量、奖励比例和活动天数影响按比例计提金额。合格积分、发放方式与单人上限决定奖池实发 WXT，再按现货估值折算成本。</td></tr>
+        <tr><th scope="row">WXT 买入价保</th><td>价保开关、活动参考均价、用户买入均价、触发跌幅、持仓和风控比例、受保比例、赔付上限、赠金经济成本率</td><td>价格跌幅、持仓和风控条件决定预计触发且过审人数。净买入金额、受保比例、跌幅和平均持仓比例用于计算赠金面值，逐户封顶后再折算经济成本。</td></tr>
+        <tr><th scope="row">合约抵扣首用与返奖</th><td>合约任务可参与人数、至少使用一次比例、人均成功抵扣的全期成交、抵扣和返还规则</td><td>可参与人数 × 使用率得到首用人数。成功抵扣成交、费率、抵扣及返还比例和单人上限共同决定返还 WXT 和成本。持仓、净买入及累计成交门槛可在「逐户验算」查看资格变化。</td></tr>
+      </tbody>
+    </table>
+    <p class="caption">改动 P50 参数会联动 P25、P75，共用规则同时作用于三组。全期规则预算汇总现货奖池、价保经济成本、合约返奖和其他任务预算。</p>
+  </details>
+  <section id="overview" role="tabpanel" aria-labelledby="tab-overview">
+    <div class="layout">
+      <aside class="panel" aria-label="输入参数">
+        <div class="control-head"><h2>输入参数</h2><p class="caption">调整 P50 中性参数时，P25、P75 按相同比例更新。也可切到对应分位单独微调。</p></div>
+        <div id="scenarios" class="scenario-tabs" aria-label="选择要编辑的分位"></div>
+        <div id="parameter-fields"></div>
+      </aside>
+      <div class="stack">
+        <div id="kpis" class="summaries"></div>
+        <section class="panel" aria-labelledby="chart-heading">
+          <div class="panel-head">
+            <div><h2 id="chart-heading">全期预算构成</h2><p class="caption" id="chart-duration"></p></div>
+            <span id="rule-check" class="tag"></span>
+          </div>
+          <div id="chart" class="chart"></div>
+          <ul class="legend">
+            <li><span class="swatch spot"></span>现货奖池</li>
+            <li><span class="swatch contract"></span>合约返还</li>
+            <li><span class="swatch protect"></span>价保经济成本</li>
+            <li><span class="swatch other"></span>其他任务</li>
+          </ul>
+        </section>
+        <div id="results" class="stack"></div>
+      </div>
+    </div>
+  </section>
+  <section id="goal" class="secondary stack" role="tabpanel" aria-labelledby="tab-goal" hidden>
+    <div class="goal-grid">
+      <section class="panel">
+        <div class="panel-head"><h2>输入目标</h2></div>
+        <div id="goal-fields"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>需要达到的参数</h2><span id="goal-tag" class="tag"></span></div>
+        <dl id="goal-output" class="goal-results"></dl>
+      </section>
+    </div>
+    <section class="panel">
+      <h2>把参数变成活动动作</h2>
+      <dl id="actions" class="action-list"></dl>
+    </section>
+  </section>
+  <section id="cases" class="secondary stack" role="tabpanel" aria-labelledby="tab-cases" hidden>
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>逐户验算</h2><p class="caption">输入四个小时价格及逐户余额。参考价取四小时均值，赔付按实际跌幅和平均有效新增持仓计算。</p></div>
+        <span id="cases-count" class="tag"></span>
+      </div>
+      <div id="hours" class="hours"></div>
+      <p id="case-totals" class="outcome"></p>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>样例输入与结果</h2><span class="help">横向滚动查看右侧计算结果</span></div>
+      <div class="scroll"><table id="cases-table" class="case-table" aria-label="逐户验算结果"></table></div>
+      <p class="caption">此处使用独立样例池。改变参数后，样例状态与默认答案比较。</p>
+    </section>
+  </section>
+  <section id="audit" class="secondary stack" role="tabpanel" aria-labelledby="tab-audit" hidden>
+    <section class="panel">
+      <div class="panel-head">
+        <div><h2>原表校验</h2><p class="caption">按原表展示精度比较公式结果。改动参数后可用差值衡量变化。</p></div>
+        <span id="audit-count" class="tag audit-count"></span>
+      </div>
+      <div class="scroll"><table id="audit-table" class="audit-table" aria-label="原表与计算结果对照"></table></div>
+    </section>
+  </section>
+  <details class="footer">
+    <summary>数据来源与待确认口径</summary>
+    <dl id="sources" class="action-list"></dl>
+  </details>
+</main>
+<script type="application/json" id="model-data">{"scenarios":["P25 悲观","P50 中性","P75 乐观"],"common":[{"row":6,"label":"活动期长度","value":30,"unit":"天","info":"目标表按现货日均成本计 30 天。改变天数可复算全期。"},{"row":7,"label":"平台基线日均合约成交","value":1449000000,"unit":"USDT/日","info":"11-26 会议口径，平台日均合约成交 14.49 亿。"},{"row":8,"label":"平台基线合约 DAU","value":20000,"unit":"人/日","info":"11-26 会议以约 2 万作活动 DAU 渗透率参考。"},{"row":9,"label":"合约手续费平台留存比例","value":0.2,"unit":"%","info":"11-26 会议使用 20%。"},{"row":10,"label":"整体及合约奖励 WXT 估值","value":0.015,"unit":"USDT/WXT","info":"由整体目标表奖励与其 USDT 成本回推。0.015 可重现原表。"},{"row":11,"label":"现货费收与奖励 WXT 估值","value":0.013,"unit":"USDT/WXT","info":"目标表和 11-26 本地现货模拟的历史估值。"},{"row":12,"label":"现货手续费率","value":0.001,"unit":"%","info":"前一版现货测算用 0.1%。"},{"row":13,"label":"现货手续费平台留存比例","value":0.4,"unit":"%","info":"前一版现货测算用 40%。"},{"row":14,"label":"计提奖励的参考净买入量","value":1000,"unit":"WXT","info":"11-27 会议和活动方案所述基准。"},{"row":15,"label":"每参考单位净买入奖励","value":10,"unit":"WXT","info":"11-27 会议和活动方案所述基准。"},{"row":16,"label":"公示奖池上限","value":1500000,"unit":"WXT","info":"活动方案任务二。可用第 18 行切换奖池测算口径。"},{"row":17,"label":"现货单人奖励上限","value":5000,"unit":"WXT","info":"活动方案任务二。触及单人上限后的余额单列。"},{"row":18,"label":"现货奖池测算方式","value":2,"unit":"1 或 2","info":"1 = 按公示奖池上限；2 = 按每千枚 10 枚计提且受公示上限约束（默认，用于预算试算）。"},{"row":19,"label":"是否模拟价保","value":1,"unit":"0 或 1","info":"11-27 仍待拍板。1 = 测价保敞口，0 = 关闭。"},{"row":20,"label":"正净买入金额受保比例","value":0.5,"unit":"%","info":"活动方案及 11-27 会议均为 50%。"},{"row":21,"label":"价保触发跌幅（含等于）","value":0.2,"unit":"%","info":"活动期参考均价较个人加权买入均价下跌达到 20%。"},{"row":22,"label":"价保单账户赠金上限","value":50,"unit":"USDT","info":"逐账户封顶，以有效期 7 天的合约赠金发放。"},{"row":23,"label":"赠金经济成本率","value":0.5,"unit":"%","info":"演示参数，暂以 50% 折算。用财务实际赠金兑现成本替换。"},{"row":24,"label":"抵扣奖励任务持仓门槛","value":500,"unit":"WXT","info":"按 11-27 会议使用严格大于。17,558 是 ≥500 的参考统计；与 DAU 口径独立。"},{"row":25,"label":"可用 WXT 抵扣的手续费比例","value":0.1,"unit":"%","info":"活动方案。以成功使用抵扣的合约成交为估算基数。"},{"row":26,"label":"WXT 抵扣部分支付系数","value":0.8,"unit":"%","info":"活动方案。按应付手续费 × 10% × 0.8 计算对应的 WXT 支付价值。"},{"row":27,"label":"返还实际抵扣 WXT 的比例","value":1,"unit":"%","info":"活动方案任务三及 11-27 会议。"},{"row":28,"label":"合约任务单人 WXT 上限","value":160000,"unit":"WXT","info":"活动方案给出 160,000 WXT，同时给出 2,400 U。测算取两者折算后较低值。"},{"row":29,"label":"合约任务单人 USDT 上限","value":2400,"unit":"USDT","info":"11-27 会议及活动方案。"},{"row":30,"label":"合约任务最低正净买入量","value":1,"unit":"WXT","info":"演示校验门槛。方案确认需要净买入，附件未附任务档位明细。"},{"row":31,"label":"合约任务最低累计成交量","value":1000,"unit":"USDT","info":"演示校验门槛，参考前一晚讨论的 1,000 U 筛选线。需换成正式档位。"},{"row":32,"label":"价格联动可额外解锁奖池","value":0,"unit":"WXT","info":"11-27 提出的备选。0 停用；达到下一行的价格变动阈值后提高奖池上限。"},{"row":33,"label":"奖池额外解锁涨幅","value":0.2,"unit":"%","info":"备选试算阈值。比较活动参考均价与现货估值的变动。"}],"scenes":[{"row":37,"label":"活动报名人数","values":[519,726,944],"info":"原表分位。11-26 会议参照前次合约挖矿；现货沿用同一报名人数。"},{"row":38,"label":"报名中新注册比例","values":[0.2524084778420039,0.3002754820936639,0.3050847457627119],"info":"按原表注册 ÷ 报名反推。"},{"row":39,"label":"新注册至合约 eFTTc 转化","values":[0.2519083969465649,0.2018348623853211,0.2569444444444444],"info":"按原表 eFTTc ÷ 新注册反推，待用漏斗明细校准。"},{"row":40,"label":"合约活动 DAU 渗透率","values":[0.2294,0.19045,0.20675],"info":"按原表日活 ÷ 2 万反推。原表 P25 日活高于 P50，按原表保留。"},{"row":41,"label":"无活动增幅时的成交覆盖率","values":[0.15,0.2,0.22],"info":"演示拆分。P50 用会议讨论的 20%；P25 和 P75 设 15% / 22%。"},{"row":42,"label":"受影响组交易量变化率","values":[0.1389469887278583,0.2422360835058661,0.2880269464834682],"info":"按原表 DAU × 人均成交还原精确成交，再反推所需变化率。"},{"row":43,"label":"合约成交有效手续费率","values":[0.0007069275278257986,0.0005083333093287048,0.0004651760558637963],"info":"按原表手续费 ÷ 精确成交倒推各分位费率。"},{"row":44,"label":"历史奖励强度（WXT/活动 DAU）","values":[203.9348299912816,256.296928327645,245.8130592503023],"info":"从整体表奖励 ÷ DAU 倒推历史回放系数，实际规则另测。"},{"row":47,"label":"报名至买入转化率","values":[0.269,0.311,0.357],"info":"淘金 7、8 期抽样分位，见 11-26 本地现货模拟。"},{"row":48,"label":"报名至正净买入转化率","values":[0.208,0.25,0.301],"info":"淘金 7、8 期参考；完成正净买入人数以报名为分母。"},{"row":49,"label":"按买家折算人均买入量（WXT）","values":[4843.613382899628,6778.289389067524,12448.07843137255],"info":"把每千名报名的买入量，除以对应参考买家数 269／311／357。"},{"row":50,"label":"按买家折算人均卖出量（WXT）","values":[2547.438661710037,3284.086816720257,8724.271708683473],"info":"同分位卖出量按参考买家数折算。这是规模系数，可独立调整。"},{"row":51,"label":"按正净买家折算人均净买入量（WXT）","values":[1920.096153846154,3154.036,4838.614617940199],"info":"把每千报名的独立净买入分位，除以参考正净买家数 208／250／301。"},{"row":52,"label":"净买入结算基础","values":[1,1,1],"info":"1 = 独立净买入分位；2 = 同口径买减卖的净买入。切换会同时更新现货计提和规则预算。"},{"row":55,"label":"期内平均价变动（相对现货估值）","values":[-0.25,0,0.15],"info":"演示价格情景。实际结算可用下一行覆盖。"},{"row":56,"label":"实际活动每小时均价（覆盖）","values":[0,0,0],"info":"0 使用情景价。实结输入活动期间每小时价格的算术平均。"},{"row":57,"label":"用户加权平均买入价","values":[0.013,0.013,0.013],"info":"演示均价，参考活动方案价保示例。"},{"row":58,"label":"平均有效新增持仓比例","values":[0.6,0.7,0.8],"info":"演示。每小时有效新增持仓均值 ÷ 正净买入量；逐户页可由小时样例实算。"},{"row":59,"label":"期末仍有有效持仓的比例","values":[0.9,0.95,0.98],"info":"演示，用于剔除期末无有效 WXT 的用户。"},{"row":60,"label":"价保风控通过比例","values":[0.95,0.97,0.98],"info":"演示。默认期末资格及风控按条件通过率依次折算。"},{"row":61,"label":"现货奖池资格通过比例","values":[1,1,1],"info":"演示。实际以资格及发奖前净买入、持仓复核结果替换。"},{"row":62,"label":"大额用户占正净买入人数比例","values":[0.1,0.1,0.1],"info":"演示，用数量分组体现单人封顶。"},{"row":63,"label":"大额组占净买入量比例","values":[0.45,0.45,0.45],"info":"演示。同原表一致采用净买入量作为预算代理；正式结算换成逐户量。"},{"row":64,"label":"合约任务可参与用户","values":[4000,5000,6000],"info":"11-26 会议以 5,000 作可用抵扣规模参考。按已满足持仓、净买入、交易门槛的人群填。"},{"row":65,"label":"合约任务至少使用一次比例","values":[0.2,0.3,0.4],"info":"演示，分母为合约任务可参与人数。"},{"row":66,"label":"人均成功抵扣的全期成交（U）","values":[500000,750000,1000000],"info":"演示。按已首次使用用户的实际成功抵扣成交额填写。"},{"row":67,"label":"其余任务全期预算（USDT）","values":[0,0,0],"info":"首充首交、邀请及理财等需另定预算后填入。"},{"row":68,"label":"全期去重正净买家折算倍数","values":[5,5,5],"info":"演示。用目标表正净买家人数 × 倍数估计全期去重买家，获实际数据后反推。"}],"metrics":[{"row":7,"label":"报名人数","info":"共用报名规模，按历史分位设初值。","format":"int","precision":0,"baseline":[519,726,944]},{"row":8,"label":"注册用户数","info":"报名人数 × 报名中新注册率。","format":"int","precision":0,"baseline":[131,218,288]},{"row":9,"label":"合约 eFTTc","info":"新注册人数 × eFTTc 转化率。","format":"int","precision":0,"baseline":[33,44,74]},{"row":10,"label":"活动 DAU","info":"平台 DAU × 活动渗透率；与可使用抵扣人数分开。","format":"int","precision":0,"baseline":[4588,3809,4135]},{"row":11,"label":"合约交易量（亿 USDT/日）","info":"平台基线 × 基础成交覆盖率 ×（1＋交易量变化率）。","format":"dec","precision":1,"baseline":[2.5,3.6,4.1]},{"row":12,"label":"人均合约交易量（USDT/日）","info":"用未舍入的合约交易量 ÷ 活动 DAU。","format":"int","precision":0,"baseline":[53956,94513,99298]},{"row":13,"label":"合约手续费（万 USDT/日）","info":"日均合约交易量 × 有效费率。","format":"dec","precision":1,"baseline":[17.5,18.3,19.1]},{"row":14,"label":"合约手续费留存（万 USDT/日）","info":"日均毛手续费 × 平台留存比例。","format":"dec","precision":1,"baseline":[3.5,3.7,3.8]},{"row":15,"label":"WXT 奖励发放数量（原表口径）","info":"活动 DAU × 每 DAU 的历史奖励强度。","format":"int","precision":0,"baseline":[935653,976235,1016437]},{"row":16,"label":"奖励成本折算（USDT，原表）","info":"历史回放的奖励 WXT × 整体奖励估值。","format":"int","precision":0,"baseline":[14035,14644,15247]},{"row":18,"label":"报名人数","info":"沿用整体报名人数。","format":"int","precision":0,"baseline":[519,726,944]},{"row":19,"label":"买入人数","info":"报名 × 买入率。","format":"int","precision":0,"baseline":[140,226,337]},{"row":20,"label":"买入率","info":"按报名人数计算。","format":"pct","precision":3,"baseline":[0.269,0.311,0.357]},{"row":21,"label":"正净买入人数","info":"报名 × 正净买入率。","format":"int","precision":0,"baseline":[108,182,284]},{"row":22,"label":"正净买入率","info":"按报名人数计算。","format":"pct","precision":3,"baseline":[0.208,0.25,0.301]},{"row":23,"label":"买入量（WXT/日）","info":"未舍入买入人数 × 按买家折算的人均买入量。","format":"int","precision":0,"baseline":[676222,1530443,4195102]},{"row":24,"label":"卖出量（WXT/日）","info":"未舍入买入人数 × 按买家折算的人均卖出量。","format":"int","precision":0,"baseline":[355650,741501,2940149]},{"row":25,"label":"净买入量（WXT/日）","info":"按参数选择独立净买入分位或买入减卖出。","format":"int","precision":0,"baseline":[207278,572458,1374863]},{"row":26,"label":"报名人均净买入（WXT）","info":"净买入量 ÷ 报名人数。","format":"int","precision":0,"baseline":[399,789,1456]},{"row":27,"label":"按净买入比例计提奖励（WXT/日）","info":"正净买入 ÷ 参考单位 × 参考奖励。","format":"int","precision":0,"baseline":[2073,5725,13749]},{"row":28,"label":"按比例奖励折算（USDT/日）","info":"按现货奖励估值折算。","format":"int","precision":0,"baseline":[27,74,179]},{"row":29,"label":"按比例奖励全期成本（USDT）","info":"日均成本 × 活动天数。","format":"int","precision":0,"baseline":[808,2233,5362]},{"row":30,"label":"现货留存手续费（USDT/日）","info":"（买入＋卖出）× WXT 估值 × 费率 × 留存比例。","format":"dec","precision":1,"baseline":[5.4,11.8,37.1]},{"row":31,"label":"同口径买卖差（WXT/日）","info":"用于核对同一买卖样本时的算术净额。","format":"int","precision":0,"baseline":null},{"row":32,"label":"独立净分位与买卖差的差额","info":"同一分位的买、卖、净可来自不同历史抽样次序。","format":"int","precision":0,"baseline":null},{"row":34,"label":"积分奖池预计实发（WXT）","info":"按净买入档位得分，按合格积分分配后逐户封顶。","format":"int","precision":0,"baseline":null},{"row":35,"label":"积分奖池折算成本（USDT）","info":"预计实发 WXT × 现货奖励估值。","format":"two","precision":2,"baseline":null},{"row":36,"label":"预计价保触发且过审（人）","info":"按参考均价、用户买入均价、期末持仓和风控估算。","format":"dec","precision":1,"baseline":null},{"row":37,"label":"价保合约赠金面值（USDT）","info":"折入平均持仓比例并逐人封顶。","format":"two","precision":2,"baseline":null},{"row":38,"label":"价保估算经济成本（USDT）","info":"赠金面值 × 赠金经济成本率。","format":"two","precision":2,"baseline":null},{"row":39,"label":"合约任务合格且首用（人）","info":"可参与人数 × 至少用一次的转化率。","format":"int","precision":0,"baseline":null},{"row":40,"label":"合约任务预计返还（WXT）","info":"成功抵扣用量 × 返还比例，逐用户封顶。","format":"int","precision":0,"baseline":null},{"row":41,"label":"合约任务奖励成本（USDT）","info":"合约任务预计返还 × 合约奖励估值。","format":"two","precision":2,"baseline":null},{"row":42,"label":"其他任务预算（USDT）","info":"预算占位，按各任务审核后补入。","format":"two","precision":2,"baseline":null},{"row":43,"label":"全期规则预算经济成本（USDT）","info":"积分奖池＋合约返还＋价保经济成本＋其他任务预算。","format":"two","precision":2,"baseline":null},{"row":44,"label":"全期发放面值折算（USDT）","info":"奖池＋合约返还＋合约赠金面值＋其他任务预算。","format":"two","precision":2,"baseline":null}],"tiers":[[1000,1],[3000,3],[5000,5],[10000,10]],"hours":[0.01,0.011,0.009,0.01],"cases":[{"name":"持仓正好 500","inputs":[470,40,10,0.01,490,500,500,500,500,1,2000,1,20],"expected":[0,0,0,0]},{"name":"恰好跌 20%","inputs":[100,3000,0,0.0125,3100,3100,3100,3100,3100,1,2000,1,20],"expected":[3.75,3,1,20]},{"name":"四小时持仓打折","inputs":[100,4000,0,0.02,1100,2100,3100,4100,4100,1,2000,1,5],"expected":[12.5,3,1,5]},{"name":"期末无有效 WXT","inputs":[0,2000,0,0.02,2000,2000,2000,2000,0,1,2000,1,20],"expected":[0,1,0,0]},{"name":"价保及合约均封顶","inputs":[100,45000,5000,0.02,40100,40100,60000,40100,40100,1,99000000,3,200000],"expected":[50,10,1,160000]},{"name":"风控驳回","inputs":[50,5000,0,0.02,5050,5050,5050,5050,5050,0,3000,4,50],"expected":[0,0,0,0]},{"name":"净卖出","inputs":[6000,3000,4000,0.02,5000,5000,5000,5000,5000,1,4000,1,80],"expected":[0,0,0,0]},{"name":"没有成功抵扣","inputs":[0,1000,0,0.012,1000,1000,1000,1000,1000,1,2000,0,0],"expected":[0,1,0,0]},{"name":"负新增余额按 0","inputs":[100,2000,1000,0.02,0,500,2000,1100,1100,1,999,1,5],"expected":[3,1,0,0]}],"goals":[2,700000,400000000,1800],"actions":[{"name":"报名人数 / 新注册占比","info":"向站外新客测试首买引导与快速到账的任务。用渠道触达、注册、报名与合约 eFTTc 漏斗校准。"},{"name":"买入率 / 人均净买入","info":"对未到 500 WXT 的存量用户做缺口提醒，比较净买入完成率。对交易用户分开观察买入、卖出与持有。"},{"name":"抵扣首用率","info":"已持仓超过 500 WXT 的合约用户引导转入与完成一次实际抵扣，覆盖量和人均交易变化分别验证。"},{"name":"奖励与价格联动","info":"可测涨幅达阈值后额外解锁奖池。上线前明确奖励额度及费用上限。"}],"sources":[{"name":"分位与总体预测","info":"本次提供的两张 P25／P50／P75 参考表，11-26 WXT 合约抵扣专项讨论会，11-26 本地 WXT 现货活动模拟。"},{"name":"奖池、价保与抵扣规则","info":"《WXT 抵扣 8 折上线活动方案》任务二及任务三，11-27 WXT 运营方案会议。需确认价保开关、正式档位、未分配奖池。"},{"name":"待替换数据","info":"正式期内去重用户、逐户净买入及买入均价、逐小时指数价格与账户有效余额、逐户实际抵扣量和赠金兑现数据。"},{"name":"预测口径","info":"原始蒙特卡洛抽样记录未随目标表提供。当前使用历史分位的输入回推及默认参数校准，调参时直接重算。"}]}</script>
+<script>
+'use strict';
+
+const DATA = JSON.parse(document.getElementById('model-data').textContent);
+const byId = (id) => document.getElementById(id);
+const indexed = (items, field) => Object.fromEntries(items.map((item) => [item.row, item[field]]));
+const escapeText = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+})[char]);
+const precisionRound = (value, places = 0) => {
+  const power = 10 ** places;
+  return Math.sign(value) * Math.round(Math.abs(value) * power + 1e-10) / power;
+};
+const divide = (value, base) => base > 0 ? value / base : 0;
+const equalValue = (a, b) => Math.abs(a - b) < 1e-6;
+const formatters = {
+  int: new Intl.NumberFormat('zh-CN', {maximumFractionDigits:0}),
+  dec: new Intl.NumberFormat('zh-CN', {minimumFractionDigits:1, maximumFractionDigits:1}),
+  two: new Intl.NumberFormat('zh-CN', {minimumFractionDigits:2, maximumFractionDigits:2}),
+  pct: new Intl.NumberFormat('zh-CN', {style:'percent', minimumFractionDigits:1, maximumFractionDigits:1}),
+  pct2: new Intl.NumberFormat('zh-CN', {style:'percent', minimumFractionDigits:2, maximumFractionDigits:2}),
+  price: new Intl.NumberFormat('zh-CN', {minimumFractionDigits:6, maximumFractionDigits:6}),
+};
+function format(value, mode = 'int') {
+  if (typeof value !== 'number') return escapeText(value);
+  const rounded = ['int','dec','two'].includes(mode) ?
+    precisionRound(value, {int:0,dec:1,two:2}[mode]) : value;
+  return formatters[mode].format(rounded);
+}
+function element(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+function freshState() {
+  return {
+    common: indexed(DATA.common, 'value'),
+    scenarios: DATA.scenarios.map((_, i) => Object.fromEntries(DATA.scenes.map((item) => [item.row, item.values[i]]))),
+    scenarioAnchors: {},
+    tiers: DATA.tiers.map((tier) => [...tier]),
+    hours: [...DATA.hours],
+    cases: DATA.cases.map((record) => ({...record, inputs:[...record.inputs]})),
+    goals: [...DATA.goals]
+  };
+}
+let state = freshState();
+let activeScenario = 1;
+
+function pointsFor(quantity, tiers) {
+  let points = 0;
+  for (const [threshold, value] of tiers) {
+    if (quantity >= threshold) points = value;
+  }
+  return points;
+}
+function tiersValid(tiers) {
+  return tiers.every(([floor, value], i) =>
+    floor > 0 && value > 0 && (i === 0 || (floor > tiers[i-1][0] && value >= tiers[i-1][1]))
+  );
+}
+function protectionDrop(paid, reference) {
+  return paid > 0 ? Math.max(0, precisionRound(1 - reference / paid, 12)) : 0;
+}
+function canProtect(common, covered, decline, heldRatio) {
+  return common[19] === 1 && covered > 0 && heldRatio > 0 && decline > 0 && decline >= common[21];
+}
+function protectedValue(common, covered, decline, heldRatio) {
+  return canProtect(common, covered, decline, heldRatio) ? Math.min(common[22], covered * decline * heldRatio) : 0;
+}
+function poolLimit(common, reference) {
+  return common[16] + (precisionRound(reference / common[11] - 1, 12) >= common[33] ? common[32] : 0);
+}
+function poolAvailable(common, reference, modeledBudget, totalPoints) {
+  const limit = poolLimit(common, reference);
+  if (totalPoints <= 0) return 0;
+  return common[18] === 1 ? limit : Math.min(limit, modeledBudget);
+}
+function derivativeRebate(common, actualDeducted) {
+  return Math.min(common[28], common[29] / common[10], common[27] * actualDeducted);
+}
+
+function calculate(common, s, tiers) {
+  const m = {};
+  m[7] = s[37];
+  m[8] = precisionRound(m[7] * s[38]);
+  m[9] = precisionRound(m[8] * s[39]);
+  m[10] = precisionRound(common[8] * s[40]);
+  m[11] = common[7] * s[41] * (1 + s[42]) / 1e8;
+  m[12] = divide(m[11] * 1e8, m[10]);
+  m[13] = m[11] * 1e4 * s[43];
+  m[14] = m[13] * common[9];
+  m[15] = m[10] * s[44];
+  m[16] = m[15] * common[10];
+
+  m[18] = m[7];
+  const buyers = m[18] * s[47];
+  const netBuyers = m[18] * s[48];
+  m[19] = precisionRound(buyers);
+  m[20] = s[47];
+  m[21] = precisionRound(netBuyers);
+  m[22] = s[48];
+  m[23] = buyers * s[49];
+  m[24] = buyers * s[50];
+  m[31] = m[23] - m[24];
+  const independentNet = netBuyers * s[51];
+  m[32] = independentNet - m[31];
+  m[25] = s[52] === 1 ? independentNet : m[31];
+  m[26] = divide(m[25], m[18]);
+  m[27] = Math.max(m[25], 0) / common[14] * common[15];
+  m[28] = m[27] * common[11];
+  m[29] = m[28] * common[6];
+  m[30] = (m[23] + m[24]) * common[11] * common[12] * common[13];
+
+  const reference = s[56] > 0 ? s[56] : common[11] * (1 + s[55]);
+  const decline = protectionDrop(s[57], reference);
+  const netForPeriod = Math.max(0, m[25]) * common[6];
+  const buyersForPeriod = m[21] * s[68];
+  const groups = [false,true].map((large) => {
+    const buyerCount = buyersForPeriod * (large ? s[62] : 1 - s[62]);
+    const netQuantity = netForPeriod * (large ? s[63] : 1 - s[63]);
+    const netPerBuyer = divide(netQuantity, buyerCount);
+    const covered = netPerBuyer * s[57] * common[20];
+    const eligibleForProtection = buyerCount * s[59] * s[60];
+    const triggered = canProtect(common, covered, decline, s[58]) ? eligibleForProtection : 0;
+    return {
+      name:large ? '大额' : '普通',
+      buyerCount, netQuantity, netPerBuyer, covered, triggered,
+      protection: triggered * protectedValue(common, covered, decline, s[58]),
+      points: pointsFor(netPerBuyer, tiers),
+      qualifiedCount: buyerCount * s[61]
+    };
+  });
+  const totalPoints = groups.reduce((sum, g) => sum + g.points * g.qualifiedCount, 0);
+  const pool = poolAvailable(common, reference, m[27] * common[6], totalPoints);
+  for (const g of groups) {
+    g.rewardPerBuyer = Math.min(common[17], divide(pool * g.points, totalPoints));
+    g.reward = g.rewardPerBuyer * g.qualifiedCount;
+  }
+  m[34] = groups.reduce((sum,g) => sum + g.reward, 0);
+  m[35] = m[34] * common[11];
+  m[36] = groups.reduce((sum,g) => sum + g.triggered, 0);
+  m[37] = groups.reduce((sum,g) => sum + g.protection, 0);
+  m[38] = m[37] * common[23];
+  m[39] = precisionRound(s[64] * s[65]);
+  const actualUse = s[66] * s[43] * common[25] * common[26] / common[10];
+  m[40] = m[39] * derivativeRebate(common, actualUse);
+  m[41] = m[40] * common[10];
+  m[42] = s[67];
+  m[43] = m[35] + m[38] + m[41] + m[42];
+  m[44] = m[35] + m[37] + m[41] + m[42];
+  return {
+    values:m, reference, decline, groups, pool, totalPoints, actualUse,
+    valid:tiersValid(tiers) && s[48] <= s[47] &&
+      groups.every((g) => g.buyerCount > 0 || g.netQuantity === 0) &&
+      m[34] <= pool + 1e-6 && m[37] <= m[36] * common[22] + 1e-6
+  };
+}
+
+function calculateCases(model) {
+  const c = model.common;
+  const reference = model.hours.reduce((sum, val) => sum + val, 0) / model.hours.length;
+  const rows = model.cases.map((record) => {
+    const [opening, gross, sold, paid, ...remainder] = record.inputs;
+    const [h1,h2,h3,h4, ending, approved, turnover, useCount, deducted] = remainder;
+    const net = Math.max(0, gross-sold);
+    const holdAverage = [h1,h2,h3,h4].reduce((sum, h) => sum + Math.min(net, Math.max(0,h-opening)), 0) / 4;
+    const holdRatio = Math.min(1,divide(holdAverage,net));
+    const decline = protectionDrop(paid,reference);
+    const award = ending > 0 && approved === 1 ? protectedValue(c, net*paid*c[20], decline, holdRatio) : 0;
+    const points = approved === 1 ? pointsFor(net,model.tiers) : 0;
+    const eligible = approved === 1 && ending > c[24] && net > 0 && net >= c[30] &&
+      turnover >= c[31] && useCount >= 1 && deducted > 0;
+    const contract = eligible ? derivativeRebate(c,deducted) : 0;
+    const matched = [award,points,Number(eligible),contract].every((value,i) => equalValue(value,record.expected[i]));
+    return {net, holdAverage, holdRatio, decline, award, points, eligible, contract, matched};
+  });
+  const totalPoints = rows.reduce((sum, row) => sum + row.points, 0);
+  const qualifyingNet = rows.reduce((sum, row) => sum + (row.points > 0 ? row.net : 0), 0);
+  const pool = poolAvailable(c, reference, qualifyingNet / c[14] * c[15], totalPoints);
+  for (const row of rows) row.spotReward = Math.min(c[17],divide(pool*row.points,totalPoints));
+  return {rows, reference, pool, totalPoints};
+}
+
+const commonPercent = new Set([9,12,13,20,21,23,25,26,27,33]);
+const scenePercent = new Set([38,39,40,41,42,43,47,48,55,58,59,60,61,62,63,65]);
+const selectText = {
+  18: ['按公示奖池上限','按净买入比例计提'], 19:['关闭','开启'],
+  52: ['独立净买入分位','买入减卖出'],
+};
+const sceneUnits = {
+  37:'人',44:'WXT/日活',49:'WXT/人',50:'WXT/人',51:'WXT/人',56:'USDT/WXT',57:'USDT/WXT',
+  64:'人',66:'USDT/人',67:'USDT',68:'倍'
+};
+const quickFields = [37,40,42,47,48,51];
+const parameterSections = [
+  ['常用参数',quickFields,true,'scene'],
+  ['报名与合约',[38,39,41,43,44],false,'scene'],
+  ['现货买卖与净额口径',[49,50,52],false,'scene'],
+  ['奖池、价保与抵扣假设',Array.from({length:14},(_,i) => i+55),false,'scene'],
+  ['共用运营与财务参数',[6,7,8,9,10,11,12,13,14,15],false,'common'],
+  ['共用奖池、价保与抵扣规则',Array.from({length:18},(_,i) => i+16),false,'common']
+];
+
+function addNumber(value, options, handle) {
+  const field = element('input', undefined, 'control');
+  field.type = 'number';
+  field.inputMode = options.integer ? 'numeric' : 'decimal';
+  field.min = options.min ?? 0;
+  field.max = options.max ?? 1e11;
+  field.step = options.integer ? '1' : 'any';
+  field.required = true;
+  field.value = options.percent ? Number((value*100).toPrecision(12)) : Number(value.toPrecision(12));
+  if (options.id) field.id = options.id;
+  if (options.aria) field.setAttribute('aria-label', options.aria);
+  field.addEventListener('input', () => {
+    if (!field.validity.valid) return;
+    const entry = field.valueAsNumber;
+    if (Number.isFinite(entry)) handle(options.percent ? entry/100 : entry);
+  });
+  return field;
+}
+function addSelect(value, choices, id, handle) {
+  const field = element('select', undefined, 'control');
+  field.id = id;
+  for (const [code,label] of choices) {
+    const option = element('option',label);
+    option.value = code;
+    field.append(option);
+  }
+  field.value = value;
+  field.addEventListener('change',() => handle(Number(field.value)));
+  return field;
+}
+function fieldLine(title, input, unit, note) {
+  const label = element('label',undefined,'field');
+  label.htmlFor = input.id;
+  label.append(element('span',title,'field-title'));
+  const box = element('span',undefined,'input-row');
+  box.append(input);
+  if (unit) box.append(element('span',unit,'unit'));
+  label.append(box);
+  if (note) {
+    const info = element('span',note,'info');
+    info.id = input.id + '-basis';
+    input.setAttribute('aria-describedby',info.id);
+    label.append(info);
+  }
+  return label;
+}
+function fieldLimits(row, kind, percent) {
+  if (kind === 'common') {
+    if (row === 33) return {min:0,max:1000};
+    if (percent) return {min:0,max:100};
+    if ([6,7,8].includes(row)) return {min:1,integer:true};
+    if ([10,11,14].includes(row)) return {min:.00000001};
+    return {};
+  }
+  if ([42,55].includes(row)) return {min:-99,max:1000};
+  if (percent) return {min:0,max:100};
+  if ([37,64].includes(row)) return {integer:true};
+  if (row === 57) return {min:.00000001,max:100};
+  if (row === 68) return {min:1,max:1e6};
+  return {};
+}
+function editScenarioParameter(model, index, row, value) {
+  const previous = model.scenarios.map((scenario) => scenario[row]);
+  model.scenarios[index][row] = value;
+  if (index !== 1) {
+    model.scenarioAnchors[row] = model.scenarios.map((scenario) => scenario[row]);
+    return;
+  }
+  if (row === 52) {
+    for (const scenario of model.scenarios) scenario[row] = value;
+    return;
+  }
+
+  // Preserve the original ratios through rounding, limits and consecutive keystrokes.
+  const anchor = model.scenarioAnchors[row] ??= previous;
+  const neutral = anchor[1];
+  const useRatio = neutral !== 0 && neutral * value >= 0;
+  const percent = scenePercent.has(row);
+  const {min = 0, max = 1e11, integer} = fieldLimits(row, 'scene', percent);
+  const divisor = percent ? 100 : 1;
+  for (const i of [0, 2]) {
+    const projected = useRatio ? anchor[i] * (value / neutral) : anchor[i] + (value - neutral);
+    const bounded = Math.max(min / divisor, Math.min(max / divisor, projected));
+    model.scenarios[i][row] = integer ? precisionRound(bounded) : bounded;
+  }
+}
+function showLinkedParameters() {
+  for (const note of byId('parameter-fields').querySelectorAll('[data-linked-row]')) {
+    const row = Number(note.dataset.linkedRow);
+    const mode = scenePercent.has(row) ? 'pct2' : row === 37 ? 'int' : 'two';
+    note.textContent = 'P25 ' + format(state.scenarios[0][row],mode) + '　P75 ' + format(state.scenarios[2][row],mode);
+  }
+}
+function section(name, open) {
+  const details = element('details',undefined,'section-control');
+  details.open = open;
+  details.dataset.group = name;
+  details.append(element('summary',name));
+  return details;
+}
+function renderParameters() {
+  const stack = byId('parameter-fields');
+  const oldOpen = new Map([...stack.querySelectorAll('details')].map((d) => [d.dataset.group,d.open]));
+  const tabs = DATA.scenarios.map((name,i) => {
+    const button=element('button',name.replace(' ','\n'));
+    button.type='button';
+    button.setAttribute('aria-pressed',String(i===activeScenario));
+    button.addEventListener('click',() => {
+      activeScenario=i;
+      renderParameters();
+      byId('scenarios').children[i].focus();
+      updateOutputs();
+    });
+    return button;
+  });
+  byId('scenarios').replaceChildren(...tabs);
+  const groupNodes = parameterSections.map(([name,rows,initialOpen,kind]) => {
+    const details=section(name,oldOpen.get(name) ?? initialOpen);
+    const def=kind==='common' ? DATA.common : DATA.scenes;
+    for (const row of rows) {
+      const item=def.find((e) => e.row===row);
+      const bag=kind==='common' ? state.common : state.scenarios[activeScenario];
+      const percent=(kind==='common' ? commonPercent : scenePercent).has(row);
+      const id='param-' + row;
+      const change = (value) => {
+        if (kind === 'common') bag[row] = value;
+        else editScenarioParameter(state,activeScenario,row,value);
+        updateOutputs();
+      };
+      const field=selectText[row] ? addSelect(bag[row],selectText[row].map((s,i) => [i+(row===19 ? 0 : 1),s]),id,change) :
+        addNumber(bag[row],{id,percent,...fieldLimits(row,kind,percent)},change);
+      const unit=selectText[row] ? '' : percent ? '%' : item.unit || sceneUnits[row];
+      const line = fieldLine(item.label,field,unit,item.info);
+      if (activeScenario === 1 && quickFields.includes(row)) {
+        const note = element('span',undefined,'linked');
+        note.dataset.linkedRow = row;
+        line.append(note);
+      }
+      details.append(line);
+    }
+    return details;
+  });
+  const tierSection=section('现货积分档位',oldOpen.get('现货积分档位') ?? false);
+  const table=element('table',undefined,'tiers');
+  table.innerHTML='<thead><tr><th scope="col">净买入下限</th><th scope="col">积分</th></tr></thead><tbody></tbody>';
+  const tbody=table.tBodies[0];
+  for (const [i,tier] of state.tiers.entries()) {
+    const row=tbody.insertRow();
+    for (const [j,value] of tier.entries()) {
+      const input=addNumber(value,{min:.00000001,max:1e9,aria:'档位 ' + (i+1) + (j===0 ? ' 净买入下限' : ' 积分')},(newValue) => {
+        tier[j]=newValue;
+        updateOutputs();
+      });
+      row.insertCell().append(input);
+    }
+  }
+  tierSection.append(table,element('p','演示档位。净买入下限严格递增，积分须为正且不递减。','help'));
+  const linkNote = element('p','中性基准为零或调整跨零时，按相同差值联动。人数四舍五入，比例受参数范围限制，口径选项同步。','help');
+  stack.replaceChildren(...groupNodes,tierSection,linkNote);
+}
+
+const groupsOfMetrics = [
+  ['整体活动／预测分位',DATA.metrics.filter((item) => item.row<=16)],
+  ['现货活动／预测分位',DATA.metrics.filter((item) => item.row>=18 && item.row<=32)],
+  ['活动规则预算',DATA.metrics.filter((item) => item.row>=34)]
+];
+const highlightRows = new Set([10,11,14,16,25,29,43]);
+function scenarioTable(metrics, results) {
+  const header=DATA.scenarios.map((s,i) => '<th scope="col"' + (activeScenario===i ? ' class="current"' : '') + '>' + escapeText(s) + '</th>').join('');
+  const rows=metrics.map((metric) => {
+    const style=highlightRows.has(metric.row) ? 'important' : ([31,32].includes(metric.row) ? 'subtle-row' : '');
+    const values=results.map((result,i) => '<td' + (activeScenario===i ? ' class="current"' : '') +
+      '>' + format(result.values[metric.row],metric.format) + '</td>').join('');
+    return '<tr class="' + style + '" data-metric="' + metric.row + '"><th scope="row" title="' +
+      escapeText(metric.info) + '">' + escapeText(metric.label) + '</th>' + values + '</tr>';
+  }).join('');
+  return '<div class="scroll"><table class="result-table"><thead><tr><th scope="col">指标</th>' + header +
+    '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+function extraRuleTable(results) {
+  const result=results[activeScenario];
+  const groups=result.groups;
+  const checks=[
+    ['活动参考均价',format(result.reference,'price') + ' USDT/WXT'],
+    ['用户买入均价相对跌幅',format(result.decline,'pct2')],
+    ['合格总积分',format(result.totalPoints,'two')],
+    ['可发放奖池',format(result.pool,'two') + ' WXT'],
+    ['封顶后剩余奖池',format(Math.max(0,result.pool-result.values[34]),'two') + ' WXT'],
+    ['人均实际抵扣额估算',format(result.actualUse,'two') + ' WXT']
+  ];
+  const base=checks.map(([name,value]) => '<tr><th scope="row">' + name + '</th><td>' + value + '</td></tr>').join('');
+  const groupRows=groups.map((g) => '<tr><th scope="row">' + g.name + '</th><td>' + format(g.buyerCount,'dec') +
+    '</td><td>' + format(g.netPerBuyer,'two') + '</td><td>' + format(g.rewardPerBuyer,'two') + '</td><td>' +
+    format(g.protection,'two') + '</td></tr>').join('');
+  return '<details id="rule-detail" class="section-control"><summary>' + DATA.scenarios[activeScenario] + '规则明细</summary>' +
+    '<table aria-label="奖池与抵扣参数"><tbody>' + base + '</tbody></table>' +
+    '<div class="scroll"><table class="result-table" aria-label="规则分组明细"><thead><tr><th scope="col">人群</th>' +
+    '<th scope="col">全期正净买家</th><th scope="col">人均净买 WXT</th><th scope="col">人均奖池 WXT</th>' +
+    '<th scope="col">价保面值 U</th></tr></thead><tbody>' + groupRows + '</tbody></table></div></details>';
+}
+function renderOverview(results) {
+  const m=results[activeScenario].values;
+  const cards=[
+    ['合约日均成交量',format(m[11],'two'),'亿 USDT'],
+    ['日均现货净买入',format(m[25]/10000,'two'),'万 WXT'],
+    ['全期规则预算',format(m[43]),'USDT · 经济成本']
+  ];
+  byId('kpis').innerHTML=cards.map(([name,value,unit]) => '<div class="kpi"><span class="name">' +
+    name + '</span><strong class="value">' + value + '</strong><span class="foot">' + unit + '</span></div>').join('');
+  byId('chart-duration').textContent='按 ' + format(state.common[6]) + ' 天估算，单位 USDT';
+  const expense=[['spot',35,'现货奖池'],['contract',41,'合约返还'],['protect',38,'价保经济成本'],['other',42,'其他任务']];
+  const maxBudget=Math.max(1,...results.map((r) => r.values[43]));
+  byId('chart').innerHTML=results.map((r,i) => {
+    const bars=expense.map(([type,row,name]) => {
+      const amount=r.values[row];
+      const tip=name + ' ' + format(amount,'two') + ' USDT';
+      return amount > 0 ? '<span class="bar ' + type + '" style="width:' + (100*amount/maxBudget) + '%" title="' + tip + '"></span>' : '';
+    }).join('');
+    const scenario=escapeText(DATA.scenarios[i]);
+    const summary=expense.map(([,row,name]) => name + ' ' + format(r.values[row],'two')).join('，');
+    return '<div class="bar-row"><span>' + scenario + '</span><span class="bar-line" role="img" aria-label="' + summary +
+      '">' + bars + '</span><b class="bar-total">' + format(r.values[43],'two') + '</b></div>';
+  }).join('');
+  const review=byId('rule-check');
+  const allValid=results.every((r) => r.valid);
+  review.textContent=allValid ? '约束检查通过' : '检查转化率、分组或积分档位';
+  review.classList.toggle('warn',!allValid);
+  const detailWasOpen=Boolean(byId('rule-detail')?.open);
+  byId('results').innerHTML=groupsOfMetrics.map(([heading,metrics],idx) => {
+    const notes=[
+      '活动 DAU 与可使用抵扣人数分开。整体奖励为原表回放口径。',
+      '买入、卖出、净买入为独立历史分位。下方同时列示同口径买入减卖出。',
+      '采用全期去重及分组假设。积分与合约正式档位待确认。'
+    ];
+    const extra=idx===2 ? extraRuleTable(results) : '';
+    return '<section class="panel"><div class="panel-head"><div><h2>' + heading + '</h2><p class="caption">' +
+      notes[idx] + '</p></div></div>' + scenarioTable(metrics,results) + extra + '</section>';
+  }).join('');
+  byId('rule-detail').open=detailWasOpen;
+}
+
+function actionList(host, data) {
+  host.innerHTML=data.map((item) => '<dt>' + escapeText(item.name) + '</dt><dd>' + escapeText(item.info) + '</dd>').join('');
+}
+function renderGoalFields() {
+  const select=addSelect(state.goals[0],DATA.scenarios.map((s,i) => [i+1,s]),'target-1',(value) => {
+    state.goals[0]=value;
+    updateOutputs();
+  });
+  const definitions=[
+    ['目标日均现货净买入','WXT/日'],
+    ['目标日均合约交易量','USDT/日'],
+    ['目标活动期合约抵扣首用','人']
+  ];
+  const nodes=[fieldLine('倒推情景',select)];
+  definitions.forEach(([title,unit],i) => {
+    const id='target-' + (i+2);
+    const input=addNumber(state.goals[i+1],{id,integer:true},(value) => {
+      state.goals[i+1]=value;
+      updateOutputs();
+    });
+    nodes.push(fieldLine(title,input,unit));
+  });
+  byId('goal-fields').replaceChildren(...nodes);
+}
+function calculateGoal(result, goals, common, s) {
+  const [,netGoal,contractGoal,firstUseGoal]=goals;
+  const m=result.values;
+  const netPerSignup=divide(m[25],m[7]);
+  const volumeBase=common[7]*s[41];
+  return {
+    neededSignups:netGoal===0 ? 0 : netPerSignup>0 ? Math.ceil(netGoal/netPerSignup) : null,
+    netPerBuyer:m[7]*s[48]>0 ? netGoal/(m[7]*s[48]) : null,
+    neededLift:volumeBase>0 ? contractGoal/volumeBase-1 : null,
+    neededFirstUse:s[64]>0 ? firstUseGoal/s[64] : null
+  };
+}
+function renderGoal(results) {
+  const i=state.goals[0]-1;
+  const s=state.scenarios[i];
+  const result=results[i];
+  const m=result.values;
+  const g=calculateGoal(result,state.goals,state.common,s);
+  const targetReporting=[
+    ['达到净买入目标需报名',g.neededSignups,'int','人','当前 ' + format(m[7]) + ' 人'],
+    ['报名不变时正净买家人均需要',g.netPerBuyer,'two','WXT/人','按独立净买入分位计'],
+    ['达到合约成交目标所需变化率',g.neededLift,'pct2','','当前 ' + format(s[42],'pct2')],
+    ['达到抵扣首用目标所需使用率',g.neededFirstUse,'pct2','','当前 ' + format(s[65],'pct2') + (g.neededFirstUse>1 ? ' · 需增加合格人群' : '')]
+  ];
+  byId('goal-tag').textContent=DATA.scenarios[i];
+  byId('goal-output').innerHTML=targetReporting.map(([name,value,mode,unit,caption]) =>
+    '<dt>' + name + '</dt><dd>' + (value===null ? '缺少有效基数' : format(value,mode) + (unit ? ' ' + unit : '')) +
+    '<small>' + caption + '</small></dd>'
+  ).join('');
+}
+
+const caseInputs=['期初 WXT','买入 WXT','卖出 WXT','加权买入均价','第 1 小时余额','第 2 小时余额',
+  '第 3 小时余额','第 4 小时余额','期末有效 WXT','资格及风控 0/1','合约累计成交 U','抵扣次数','抵扣实付 WXT'];
+const caseOutputs=['正净买入 WXT','平均有效新增 WXT','平均持仓比例','参考价跌幅','合约赠金 U',
+  '奖池积分','现货实发 WXT','合约返奖资格','合约返还 WXT','与基准对照'];
+function renderCaseFields() {
+  const hours=state.hours.map((value,i) => {
+    const label='第 ' + (i+1) + ' 小时价格';
+    const field=addNumber(value,{id:'hour-' + i,min:.00000001,max:100},(newValue) => {
+      state.hours[i]=newValue;
+      updateOutputs();
+    });
+    return fieldLine(label,field,'U');
+  });
+  byId('hours').replaceChildren(...hours);
+  const table=byId('cases-table');
+  const header=['样例',...caseInputs,...caseOutputs].map((item) => '<th scope="col">' + escapeText(item) + '</th>').join('');
+  table.innerHTML='<thead><tr>' + header + '</tr></thead><tbody></tbody>';
+  for (const [i,record] of state.cases.entries()) {
+    const row=table.tBodies[0].insertRow();
+    const heading=element('th',record.name);
+    heading.scope='row';
+    row.append(heading);
+    for (const [j,value] of record.inputs.entries()) {
+      const id='case-' + i + '-' + j;
+      const input=addNumber(value,{
+        id,aria:record.name + ' ' + caseInputs[j],integer:[9,11].includes(j),
+        min:j===3 ? .00000001 : 0,max:j===9 ? 1 : j===3 ? 100 : 1e11
+      },(newValue) => {
+        record.inputs[j]=newValue;
+        updateOutputs();
+      });
+      row.insertCell().append(input);
+    }
+    for (const _ of caseOutputs) row.insertCell();
+  }
+}
+function renderCaseResults() {
+  const value=calculateCases(state);
+  for (const [i,row] of value.rows.entries()) {
+    const fields=[format(row.net),format(row.holdAverage,'two'),format(row.holdRatio,'pct2'),format(row.decline,'pct2'),
+      format(row.award,'two'),format(row.points,'two'),format(row.spotReward,'two'),
+      row.eligible ? '通过' : '未达',format(row.contract,'two'),row.matched ? '通过' : '已变化'];
+    const cells=byId('cases-table').tBodies[0].rows[i].cells;
+    fields.forEach((v,j) => {
+      const cell=cells[j+1+caseInputs.length];
+      cell.textContent=v;
+      cell.classList.toggle('different',j===fields.length-1 && !row.matched);
+    });
+  }
+  const passes=value.rows.filter((r) => r.matched).length;
+  byId('cases-count').textContent=passes + ' / ' + value.rows.length + ' 与默认一致';
+  byId('case-totals').innerHTML='参考均价 <strong>' + format(value.reference,'price') +
+    '</strong> USDT/WXT<span>样例可发奖池 ' + format(value.pool,'two') + ' WXT</span>';
+}
+
+function renderAudit(results) {
+  let passed=0;
+  const head=DATA.scenarios.map((s) => '<th scope="colgroup" class="heading" colspan="3">'+ escapeText(s) + '</th>').join('');
+  const columns=DATA.scenarios.map(() => '<th scope="col">原表</th><th scope="col">公式结果</th><th scope="col">差值</th>').join('');
+  const groups=groupsOfMetrics.slice(0,2).map(([title,list]) => {
+    const rows=list.filter((item) => item.baseline).map((item) => {
+      const values=results.map((result,i) => {
+        const actual=precisionRound(result.values[item.row],item.precision);
+        const base=item.baseline[i];
+        const difference=precisionRound(actual-base,item.precision);
+        if (difference===0) passed++;
+        return '<td>' + format(base,item.format) + '</td><td>' + format(actual,item.format) +
+          '</td><td' + (difference===0 ? '' : ' class="different"')  + '>' +
+          (difference>0 ? '+' : '') + format(difference,item.format) + '</td>';
+      }).join('');
+      return '<tr><th scope="row">' + escapeText(item.label) + '</th>' + values + '</tr>';
+    }).join('');
+    return '<tbody><tr><th colspan="10" class="heading">' + title + '</th></tr>' + rows + '</tbody>';
+  });
+  byId('audit-table').innerHTML='<thead><tr><th rowspan="2" scope="col">指标</th>' + head + '</tr><tr>' + columns +
+    '</tr></thead>' + groups.join('');
+  const total=DATA.metrics.filter((m) => m.baseline).length * DATA.scenarios.length;
+  const count=byId('audit-count');
+  count.textContent=passed + ' / ' + total + ' 与原表一致';
+  count.classList.toggle('warn',passed!==total);
+}
+function solved() {
+  return state.scenarios.map((s) => calculate(state.common,s,state.tiers));
+}
+function updateOutputs() {
+  const results=solved();
+  showLinkedParameters();
+  renderOverview(results);
+  renderGoal(results);
+  renderCaseResults();
+  renderAudit(results);
+}
+
+const navButtons=[...document.querySelectorAll('[data-view]')];
+function switchView(button, focus) {
+  for (const item of navButtons) {
+    const active=item===button;
+    item.setAttribute('aria-selected',String(active));
+    item.tabIndex=active ? 0 : -1;
+    byId(item.dataset.view).hidden=!active;
+  }
+  if (focus) button.focus();
+}
+navButtons.forEach((button,index) => {
+  button.addEventListener('click',() => switchView(button,false));
+  button.addEventListener('keydown',(event) => {
+    const count=navButtons.length;
+    const offsets={ArrowRight:(index+1)%count,ArrowLeft:(index+count-1)%count,Home:0,End:count-1};
+    if (!Object.hasOwn(offsets,event.key)) return;
+    event.preventDefault();
+    switchView(navButtons[offsets[event.key]],true);
+  });
+});
+function resetFields() {
+  state=freshState();
+  activeScenario=1;
+  renderParameters();
+  renderGoalFields();
+  renderCaseFields();
+  updateOutputs();
+}
+byId('reset').addEventListener('click', resetFields);
+actionList(byId('actions'),DATA.actions);
+actionList(byId('sources'),DATA.sources);
+resetFields();
+
+</script>
+</body>
+</html>
